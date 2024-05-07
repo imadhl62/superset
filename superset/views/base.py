@@ -16,27 +16,19 @@
 # under the License.
 from __future__ import annotations
 
-import dataclasses
 import functools
 import logging
-import os
-import traceback
 from datetime import datetime
-from importlib.resources import files
 from typing import Any, Callable, cast
 
 import yaml
-from babel import Locale
 from flask import (
     abort,
+    current_app as app,
     flash,
     g,
-    get_flashed_messages,
     redirect,
-    request,
     Response,
-    send_file,
-    session,
 )
 from flask_appbuilder import BaseView, expose, Model, ModelView
 from flask_appbuilder.actions import action
@@ -52,97 +44,35 @@ from flask_appbuilder.security.sqla.models import User
 from flask_appbuilder.widgets import ListWidget
 from flask_babel import get_locale, gettext as __
 from flask_jwt_extended.exceptions import NoAuthorizationError
-from flask_wtf.csrf import CSRFError
 from flask_wtf.form import FlaskForm
 from sqlalchemy import exc
 from sqlalchemy.orm import Query
 from werkzeug.exceptions import HTTPException
 from wtforms.fields.core import Field, UnboundField
 
-from superset import (
-    app as superset_app,
-    appbuilder,
-    conf,
-    get_feature_flags,
-    is_feature_enabled,
-    security_manager,
-)
-from superset.commands.exceptions import CommandException, CommandInvalidError
 from superset.connectors.sqla import models
-from superset.db_engine_specs import get_available_engine_specs
-from superset.db_engine_specs.gsheets import GSheetsEngineSpec
-from superset.errors import ErrorLevel, SupersetError, SupersetErrorType
 from superset.exceptions import (
     SupersetErrorException,
     SupersetErrorsException,
     SupersetException,
     SupersetSecurityException,
 )
-from superset.extensions import cache_manager
+from superset.extensions import security_manager
+from superset.initialization import common_bootstrap_payload
 from superset.models.helpers import ImportExportMixin
-from superset.reports.models import ReportRecipientType
 from superset.superset_typing import FlaskResponse
+<<<<<<< HEAD
 from superset.translations.utils import get_language_pack
 from superset.utils import core as utils, json as json_utils
+=======
+from superset.utils import core as utils
+>>>>>>> e6965546c6 (chore: module scope should not require the app context)
 from superset.utils.filters import get_dataset_access_filters
+from superset.views.utils import get_error_msg
 
-from .utils import bootstrap_user_data
-
-FRONTEND_CONF_KEYS = (
-    "SUPERSET_WEBSERVER_TIMEOUT",
-    "SUPERSET_DASHBOARD_POSITION_DATA_LIMIT",
-    "SUPERSET_DASHBOARD_PERIODICAL_REFRESH_LIMIT",
-    "SUPERSET_DASHBOARD_PERIODICAL_REFRESH_WARNING_MESSAGE",
-    "ENABLE_JAVASCRIPT_CONTROLS",
-    "DEFAULT_SQLLAB_LIMIT",
-    "DEFAULT_VIZ_TYPE",
-    "SQL_MAX_ROW",
-    "SUPERSET_WEBSERVER_DOMAINS",
-    "SQLLAB_SAVE_WARNING_MESSAGE",
-    "SQLLAB_DEFAULT_DBID",
-    "DISPLAY_MAX_ROW",
-    "GLOBAL_ASYNC_QUERIES_TRANSPORT",
-    "GLOBAL_ASYNC_QUERIES_POLLING_DELAY",
-    "SQL_VALIDATORS_BY_ENGINE",
-    "SQLALCHEMY_DOCS_URL",
-    "SQLALCHEMY_DISPLAY_TEXT",
-    "GLOBAL_ASYNC_QUERIES_WEBSOCKET_URL",
-    "DASHBOARD_AUTO_REFRESH_MODE",
-    "DASHBOARD_AUTO_REFRESH_INTERVALS",
-    "DASHBOARD_VIRTUALIZATION",
-    "SCHEDULED_QUERIES",
-    "EXCEL_EXTENSIONS",
-    "CSV_EXTENSIONS",
-    "COLUMNAR_EXTENSIONS",
-    "ALLOWED_EXTENSIONS",
-    "SAMPLES_ROW_LIMIT",
-    "DEFAULT_TIME_FILTER",
-    "HTML_SANITIZATION",
-    "HTML_SANITIZATION_SCHEMA_EXTENSIONS",
-    "WELCOME_PAGE_LAST_TAB",
-    "VIZ_TYPE_DENYLIST",
-    "ALERT_REPORTS_DEFAULT_CRON_VALUE",
-    "ALERT_REPORTS_DEFAULT_RETENTION",
-    "ALERT_REPORTS_DEFAULT_WORKING_TIMEOUT",
-    "NATIVE_FILTER_DEFAULT_ROW_LIMIT",
-    "PREVENT_UNSAFE_DEFAULT_URLS_ON_DATASET",
-    "JWT_ACCESS_CSRF_COOKIE_NAME",
-)
+from .utils import bootstrap_user_data, json_errors_response, json_success
 
 logger = logging.getLogger(__name__)
-config = superset_app.config
-
-
-def get_error_msg() -> str:
-    if conf.get("SHOW_STACKTRACE"):
-        error_msg = traceback.format_exc()
-    else:
-        error_msg = "FATAL ERROR \n"
-        error_msg += (
-            "Stacktrace is hidden. Change the SHOW_STACKTRACE "
-            "configuration setting to enable it"
-        )
-    return error_msg
 
 
 def json_error_response(
@@ -161,6 +91,7 @@ def json_error_response(
     )
 
 
+<<<<<<< HEAD
 def json_errors_response(
     errors: list[SupersetError],
     status: int = 500,
@@ -182,6 +113,8 @@ def json_success(json_msg: str, status: int = 200) -> FlaskResponse:
     return Response(json_msg, status=status, mimetype="application/json")
 
 
+=======
+>>>>>>> e6965546c6 (chore: module scope should not require the app context)
 def data_payload_response(payload_json: str, has_error: bool = False) -> FlaskResponse:
     status = 400 if has_error else 200
     return json_success(payload_json, status=status)
@@ -318,6 +251,7 @@ class BaseSupersetView(BaseView):
         )
 
 
+<<<<<<< HEAD
 def get_environment_tag() -> dict[str, Any]:
     # Whether flask is in debug mode (--debug)
     debug = appbuilder.app.config["DEBUG"]
@@ -555,6 +489,8 @@ def get_common_bootstrap_data() -> dict[str, Any]:
     return {"bootstrap_data": serialize_bootstrap_data}
 
 
+=======
+>>>>>>> e6965546c6 (chore: module scope should not require the app context)
 class SupersetListWidget(ListWidget):  # pylint: disable=too-few-public-methods
     template = "superset/fab_overrides/list.html"
 
@@ -741,8 +677,11 @@ class CsvResponse(Response):
     Override Response to take into account csv encoding from config.py
     """
 
-    charset = conf["CSV_EXPORT"].get("encoding", "utf-8")
-    default_mimetype = "text/csv"
+    default_mimetype: str = "text/csv"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.charset: str = app.config["CSV_EXPORT"].get("encoding", "utf-8")
+        super().__init__(*args, **kwargs)
 
 
 class XlsxResponse(Response):
@@ -774,18 +713,3 @@ def bind_field(
 
 
 FlaskForm.Meta.bind_field = bind_field
-
-
-@superset_app.after_request
-def apply_http_headers(response: Response) -> Response:
-    """Applies the configuration's http headers to all responses"""
-
-    # HTTP_HEADERS is deprecated, this provides backwards compatibility
-    response.headers.extend(
-        {**config["OVERRIDE_HTTP_HEADERS"], **config["HTTP_HEADERS"]}
-    )
-
-    for k, v in config["DEFAULT_HTTP_HEADERS"].items():
-        if k not in response.headers:
-            response.headers[k] = v
-    return response
