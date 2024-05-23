@@ -54,7 +54,7 @@ from superset.models.dashboard import Dashboard
 from superset.models.slice import Slice
 from superset.models.sql_lab import Query
 from superset.superset_typing import FlaskResponse, FormData
-from superset.utils import core as utils
+from superset.utils import json as json_utils
 from superset.utils.core import DatasourceType
 from superset.utils.decorators import stats_timing
 
@@ -581,7 +581,7 @@ def json_errors_response(
 
     payload["errors"] = [dataclasses.asdict(error) for error in errors]
     return Response(
-        json.dumps(payload, default=utils.json_iso_dttm_ser, ignore_nan=True),
+        json.dumps(payload, default=json_utils.json_iso_dttm_ser, ignore_nan=True),
         status=status,
         mimetype="application/json; charset=utf-8",
     )

@@ -106,7 +106,7 @@ class Query(
     __tablename__ = "query"
     type = "query"
     id = Column(Integer, primary_key=True)
-    client_id = Column(String(11), unique=True, nullable=False)
+    client_id = Column(Integer, unique=True, nullable=False)
     query_language = "sql"
     database_id = Column(Integer, ForeignKey("dbs.id"), nullable=False)
 
