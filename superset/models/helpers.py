@@ -17,6 +17,8 @@
 # pylint: disable=too-many-lines
 """a collection of model-related helper classes and functions"""
 
+from __future__ import annotations
+
 import builtins
 import dataclasses
 import json
@@ -807,7 +809,7 @@ class ExploreMixin:  # pylint: disable=too-many-public-methods
 
     def get_sqla_row_level_filters(
         self,
-        template_processor: BaseTemplateProcessor,
+        template_processor: BaseTemplateProcessor | None,
     ) -> list[TextClause]:
         """
         Return the appropriate row level security filters for this table and the
@@ -817,6 +819,8 @@ class ExploreMixin:  # pylint: disable=too-many-public-methods
         :param template_processor: The template processor to apply to the filters.
         :returns: A list of SQL clauses to be ANDed together.
         """
+        template_processor = template_processor or self.get_template_processor()
+
         all_filters: list[TextClause] = []
         filter_groups: dict[Union[int, str], list[TextClause]] = defaultdict(list)
         try:
