@@ -54,6 +54,7 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("cluster_name"),
     )
+    print("BEOFRE DASHBOARD")
     op.create_table(
         "dashboards",
         sa.Column("created_on", sa.DateTime(), nullable=False),

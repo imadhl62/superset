@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 import os
-from typing import Any
+from typing import Any, Union
 
 from babel import Locale
 from flask import current_app as app, g, get_flashed_messages, session
@@ -142,7 +142,7 @@ def menu_data(user: User) -> dict[str, Any]:
 
 @cache_manager.cache.memoize(timeout=60)
 def cached_common_bootstrap_data(  # pylint: disable=unused-argument
-    user_id: int | None, locale: Locale | None
+    user_id: Union[int, None], locale: Locale | None
 ) -> dict[str, Any]:
     """Common data always sent to the client
 
