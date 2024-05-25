@@ -29,7 +29,6 @@ from sqlalchemy.engine import Engine
 
 from superset import security_manager
 from superset.extensions import db, feature_flag_manager
-from superset.utils.core import json_dumps_w_dates
 from superset.utils.database import get_example_database, remove_database
 from superset.utils.json import json_dumps_w_dates
 from tests.integration_tests.test_app import app, login

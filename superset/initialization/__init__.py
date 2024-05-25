@@ -76,7 +76,7 @@ from superset.superset_typing import FlaskResponse
 from superset.tags.core import (
     register_sqla_event_listeners as register_tag_event_listeners,
 )
-from superset.utils import core as utils
+from superset.utils import core as utils, json as json_utils
 from superset.utils.core import is_test, pessimistic_connection_handling
 from superset.utils.log import DBEventLogger, get_event_logger_from_cfg_value
 from superset.views.utils import get_error_msg, json_errors_response
@@ -589,7 +589,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             def serialize_bootstrap_data() -> str:
                 return json.dumps(
                     {"common": common_bootstrap_payload()},
-                    default=utils.pessimistic_json_iso_dttm_ser,
+                    default=json_utils.pessimistic_json_iso_dttm_ser,
                 )
 
             return {"bootstrap_data": serialize_bootstrap_data}
