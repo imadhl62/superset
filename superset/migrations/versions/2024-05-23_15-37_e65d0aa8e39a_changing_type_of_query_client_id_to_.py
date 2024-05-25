@@ -25,77 +25,78 @@ Create Date: 2024-05-23 15:37:37.094584
 import sqlalchemy as sa
 from alembic import op
 
+from superset.migrations.shared.constraints import delete_fk
+from superset.migrations.shared.utils import force_add_column
+
 # revision identifiers, used by Alembic.
 revision = "e65d0aa8e39a"
 down_revision = "f7b6750b67e8"
 
 
 def upgrade():
-    # Step 1: Add the new column
-    # op.add_column('tab_state', sa.Column('latest_query_id_int', sa.Integer(), nullable=True))
+    force_add_column(
+        "tab_state", sa.Column("latest_query_id_temp", sa.Integer(), nullable=True)
+    )
 
-    # Step 2: Update new column with casted values from the old column
+    # update new column with casted values from the old column
     op.execute("""
         UPDATE tab_state
-        SET latest_query_id_int = CAST(latest_query_id AS INTEGER)
-        WHERE latest_query_id IS NOT NULL AND latest_query_id != '';
+        SET latest_query_id_temp = CAST(latest_query_id as int)
     """)
 
-    # Step 3: Drop the old foreign key constraint if it exists
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_constraint(["latest_query_id"], type_="foreignkey")
-
-    # Step 4: Drop the old column
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_column("latest_query_id")
-
-    # Step 5: Rename the new column to the original name
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.alter_column("latest_query_id_int", new_column_name="latest_query_id")
-
-    # Step 6: Recreate the foreign key constraint
-    op.create_foreign_key(
-        "fk_tab_state_latest_query_id",
-        "tab_state",
-        "other_table",
-        ["latest_query_id"],
-        ["other_id"],
+    force_add_column(
+        "tab_state", sa.Column("latest_query_id", sa.Integer(), nullable=True)
     )
+
+    # update new column with casted values from the old column
+    op.execute("""
+        UPDATE tab_state
+        SET latest_query_id = latest_query_id_temp
+    """)
+
+    delete_fk("tab_state", {"latest_query_id"}, "query")
+
+    # rename the new column to the original name
+    with op.batch_alter_table("tab_state") as batch_op:
+        batch_op.drop_column("latest_query_id_temp")
+        batch_op.create_foreign_key(
+            "fk_tab_state_latest_query_id",
+            "query",
+            ["latest_query_id"],
+            ["client_id"],
+        )
 
 
 def downgrade():
-    # Step 1: Add the old column back
-    op.add_column(
-        "tab_state",
-        sa.Column("latest_query_id_varchar", sa.VARCHAR(length=11), nullable=True),
+    op.execute("DROP TABLE IF EXISTS _alembic_tmp_tab_state")
+    force_add_column(
+        "tab_state", sa.Column("latest_query_id_temp", sa.String(50), nullable=True)
     )
 
-    # Step 2: Update the old column with casted values from the new column
+    # update new column with casted values from the old column
     op.execute("""
         UPDATE tab_state
-        SET latest_query_id_varchar = CAST(latest_query_id AS VARCHAR(11))
-        WHERE latest_query_id IS NOT NULL;
+        SET latest_query_id_temp = CAST(latest_query_id as VARCHAR)
     """)
 
-    # Step 3: Drop the foreign key constraint
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_constraint("fk_tab_state_latest_query_id", type_="foreignkey")
-
-    # Step 4: Drop the new column
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_column("latest_query_id")
-
-    # Step 5: Rename the old column back to the original name
-    with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.alter_column(
-            "latest_query_id_varchar", new_column_name="latest_query_id"
-        )
-
-    # Step 6: Recreate the foreign key constraint
-    op.create_foreign_key(
-        "fk_tab_state_latest_query_id",
-        "tab_state",
-        "other_table",
-        ["latest_query_id"],
-        ["other_id"],
+    force_add_column(
+        "tab_state", sa.Column("latest_query_id", sa.Integer(), nullable=True)
     )
+
+    # update new column with casted values from the old column
+    op.execute("""
+        UPDATE tab_state
+        SET latest_query_id = latest_query_id_temp
+    """)
+
+    delete_fk("tab_state", {"latest_query_id"}, "query")
+
+    # rename the new column to the original name
+    with op.batch_alter_table("tab_state") as batch_op:
+        batch_op.drop_column("latest_query_id_temp")
+        batch_op.create_foreign_key(
+            "fk_tab_state_latest_query_id",
+            "query",
+            ["latest_query_id"],
+            ["client_id"],
+        )
