@@ -28,7 +28,6 @@ import sqlalchemy as sqla
 import wtforms_json
 from deprecation import deprecated
 from flask import (
-    # current_app as app,
     Flask,
     redirect,
     render_template,
@@ -69,8 +68,6 @@ from superset.extensions import (
     stats_logger_manager,
     talisman,
 )
-from superset.initialization.bootstrap import common_bootstrap_payload
-from superset.models.core import Database
 from superset.security import SupersetSecurityManager
 from superset.superset_typing import FlaskResponse
 from superset.tags.core import (
@@ -79,7 +76,6 @@ from superset.tags.core import (
 from superset.utils import core as utils, json as json_utils
 from superset.utils.core import is_test, pessimistic_connection_handling
 from superset.utils.log import DBEventLogger, get_event_logger_from_cfg_value
-from superset.views.utils import get_error_msg, json_errors_response
 
 if TYPE_CHECKING:
     from superset.app import SupersetApp
@@ -468,6 +464,9 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             return "OK"
 
     def register_sqla_event_listeners(self) -> None:
+        # pylint: disable=import-outside-toplevel
+        from superset.models.core import Database
+
         # TODO move all sqla.event.listen to this method
         if feature_flag_manager.is_feature_enabled("TAGGING_SYSTEM"):
             register_tag_event_listeners()
@@ -490,6 +489,9 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         )
 
     def register_error_handlers(self) -> None:
+        # pylint: disable=import-outside-toplevel
+        from superset.views.utils import get_error_msg, json_errors_response
+
         # SIP-40 compatible error responses; make sure APIs raise
         # SupersetErrorException or SupersetErrorsException
         @self.app.errorhandler(SupersetErrorException)
@@ -586,6 +588,8 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
 
         @self.app.context_processor
         def get_common_bootstrap_data() -> dict[str, Any]:
+            from superset.initialization.bootstrap import common_bootstrap_payload
+
             def serialize_bootstrap_data() -> str:
                 return json.dumps(
                     {"common": common_bootstrap_payload()},
@@ -700,6 +704,15 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         feature_flag_manager.init_app(self.app)
 
     def configure_fab(self) -> None:
+        """
+        NOTE: somehow appbuilder.init_app will run a `db.create_all`
+        which creates the foundation db models FAB needs. This needs to happen
+        before other [superset] models are initialized. For this
+        reason we tend to do late imports in this module. A simple
+        `from superset.models import core` in this context would lead to FAB
+        creating models, and conflict with db migrations happening later in
+        the installation flows
+        """
         if self.config["SILENCE_FAB"]:
             logging.getLogger("flask_appbuilder").setLevel(logging.ERROR)
 
