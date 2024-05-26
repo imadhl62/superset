@@ -98,7 +98,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         super().__init__()
 
         self.app = app
-        self.app = app
+        self.superset_app = app
         self.config = app.config
         self.manifest: dict[Any, Any] = {}
         self.stats_logger = app.config["STATS_LOGGER"]

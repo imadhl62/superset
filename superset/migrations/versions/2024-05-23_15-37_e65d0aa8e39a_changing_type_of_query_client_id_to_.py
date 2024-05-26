@@ -34,31 +34,35 @@ down_revision = "f7b6750b67e8"
 
 
 def upgrade():
-    force_add_column(
-        "tab_state", sa.Column("latest_query_id_temp", sa.Integer(), nullable=True)
+    delete_fk("tab_state", {"client_id"}, "query")
+    force_add_column("query", sa.Column("client_id_temp", sa.Integer(), nullable=True))
+
+    # Object metadata for reference
+    query = sa.table(
+        "query",
+        sa.column("client_id", sa.String),
+        sa.column("client_id_temp", sa.Integer),
     )
 
     # update new column with casted values from the old column
-    op.execute("""
-        UPDATE tab_state
-        SET latest_query_id_temp = CAST(latest_query_id as int)
-    """)
-
-    force_add_column(
-        "tab_state", sa.Column("latest_query_id", sa.Integer(), nullable=True)
+    stmt = sa.update(query).values(
+        client_id_temp=sa.cast(query.c.client_id, sa.Integer)
     )
+    op.execute(stmt)
 
-    # update new column with casted values from the old column
-    op.execute("""
-        UPDATE tab_state
-        SET latest_query_id = latest_query_id_temp
-    """)
+    # Force the right type
+    force_add_column("query", sa.Column("client_id", sa.Integer(), nullable=True))
 
-    delete_fk("tab_state", {"latest_query_id"}, "query")
+    # update new column
+    stmt = sa.update(query).values(client_id=query.c.client_id_temp)
+    op.execute(stmt)
 
+    with op.batch_alter_table("query") as batch_op:
+        batch_op.drop_column("client_id_temp")
+
+    op.create_index("ix_query_client_id", "query", ["client_id"])
     # rename the new column to the original name
     with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_column("latest_query_id_temp")
         batch_op.create_foreign_key(
             "fk_tab_state_latest_query_id",
             "query",
@@ -68,32 +72,34 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("DROP TABLE IF EXISTS _alembic_tmp_tab_state")
-    force_add_column(
-        "tab_state", sa.Column("latest_query_id_temp", sa.String(50), nullable=True)
+    delete_fk("tab_state", {"client_id"}, "query")
+    force_add_column("query", sa.Column("client_id_temp", sa.String(50), nullable=True))
+
+    # Object metadata for reference
+    query = sa.table(
+        "query",
+        sa.column("client_id", sa.Integer),
+        sa.column("client_id_temp", sa.Integer),
     )
 
     # update new column with casted values from the old column
-    op.execute("""
-        UPDATE tab_state
-        SET latest_query_id_temp = CAST(latest_query_id as VARCHAR)
-    """)
+    stmt = sa.update(query).values(client_id_temp=sa.cast(query.c.client_id, sa.String))
+    op.execute(stmt)
 
-    force_add_column(
-        "tab_state", sa.Column("latest_query_id", sa.Integer(), nullable=True)
-    )
+    # Force the right type
+    force_add_column("query", sa.Column("client_id", sa.Integer(), nullable=True))
 
-    # update new column with casted values from the old column
-    op.execute("""
-        UPDATE tab_state
-        SET latest_query_id = latest_query_id_temp
-    """)
+    # update new column
+    stmt = sa.update(query).values(client_id=query.c.client_id_temp)
+    op.execute(stmt)
 
-    delete_fk("tab_state", {"latest_query_id"}, "query")
+    with op.batch_alter_table("query") as batch_op:
+        batch_op.drop_column("client_id_temp")
+
+    op.create_index("ix_query_client_id", "query", ["client_id"])
 
     # rename the new column to the original name
     with op.batch_alter_table("tab_state") as batch_op:
-        batch_op.drop_column("latest_query_id_temp")
         batch_op.create_foreign_key(
             "fk_tab_state_latest_query_id",
             "query",
